@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Poem for Dad, Eddie Webb</title>
+    <style>
+        /* Custom font for a nice, readable look */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #e0f2f7; /* A plain, soft blue background */
+            display: flex;
+            flex-direction: column; /* Arrange content vertically */
+            /* Removed min-height: 100vh to allow content to define height and enable scrolling */
+            /* Removed justify-content and align-items to allow content to flow from the top */
+            margin: 0;
+            padding: 2rem 1rem; /* Generous padding around the content */
+            box-sizing: border-box;
+            text-align: center; /* Center the text content */
+            color: #2c3e50; /* Darker text for readability on light background */
+            /* Added padding-bottom to ensure space below the last element, making scrolling visible */
+            padding-bottom: 5rem; /* Extra space at the bottom for scrolling past the button */
+        }
+
+        /* Heading style */
+        .poem-title {
+            font-size: 2.5rem; /* Slightly larger title */
+            font-weight: 600;
+            margin-bottom: 2rem; /* More space below the title */
+            line-height: 1.2;
+        }
+
+        /* Poem stanza style */
+        .poem-stanza {
+            font-size: 1.25rem; /* Slightly larger poem text */
+            line-height: 1.8; /* Increased line spacing for better readability */
+            margin-bottom: 1.5rem; /* More space between stanzas */
+            font-weight: 300;
+            max-width: 700px; /* Limit width for readability on wide screens */
+            width: 100%; /* Full width on smaller screens */
+            margin-left: auto; /* Center block elements */
+            margin-right: auto; /* Center block elements */
+        }
+
+        /* Specific styling for the dad's name and "Eddie Webb" to stand out subtly */
+        .highlight {
+            font-weight: 500; /* Medium weight */
+            color: #1a73e8; /* A slightly more vibrant blue for highlight */
+        }
+
+        /* Button styling */
+        .read-button {
+            background-color: #4CAF50; /* Green background */
+            color: white; /* White text */
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px; /* Rounded corners for the button */
+            cursor: pointer;
+            font-size: 1.1rem;
+            margin-top: 2rem; /* Space above the button */
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); /* Soft shadow */
+        }
+
+        .read-button:hover {
+            background-color: #45a049; /* Darker green on hover */
+            transform: translateY(-2px); /* Slight lift effect */
+        }
+
+        .read-button:active {
+            background-color: #3e8e41; /* Even darker green on active */
+            transform: translateY(0); /* Return to original position */
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <h1 class="poem-title">For Dad</h1>
+
+    <p class="poem-stanza">
+        My dad, <span class="highlight">Eddie Webb</span>, a fine old chap:<br>
+        With his cycling spirit, and an OS map.<br>
+        He loves his rides, a familiar sight<br>
+        Exploring Newbury day and night.
+    </p>
+
+    <p class="poem-stanza">
+        Past market stalls and winding lanes,<br>
+        Whether shining sun or drizzling rains.<br>
+        He knows each path, each hidden way,<br>
+        Enjoying Newbury every day.
+    </p>
+
+    <p class="poem-stanza">
+        And after all that pedaling fun,<br>
+        His active day is not quite done<br>
+        Without a cuppa, steaming hot;<br>
+        Add some sugar, and he'll slurp the lot.
+    </p>
+
+    <button id="readPoemBtn" class="read-button">Read Poem Aloud</button>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const readPoemBtn = document.getElementById('readPoemBtn');
+            const poemStanzas = document.querySelectorAll('.poem-stanza');
+            let fullPoemText = '';
+
+            poemStanzas.forEach(stanza => {
+                // Get text content, replacing <br> with a space for better pronunciation flow
+                fullPoemText += stanza.textContent.replace(/<br>/g, ' ') + ' ';
+            });
+
+            // Trim any extra whitespace
+            fullPoemText = fullPoemText.trim();
+
+            readPoemBtn.addEventListener('click', () => {
+                if ('speechSynthesis' in window) {
+                    const utterance = new SpeechSynthesisUtterance(fullPoemText);
+                    utterance.lang = 'en-GB'; // Set language to British English
+
+                    // Function to find and set a male voice
+                    const setMaleVoice = () => {
+                        const voices = window.speechSynthesis.getVoices();
+                        // Try to find a male voice, prioritizing English (UK) if possible
+                        let maleVoice = voices.find(voice =>
+                            voice.lang === 'en-GB' && (voice.name.toLowerCase().includes('male') || voice.name.toLowerCase().includes('david') || voice.name.toLowerCase().includes('daniel'))
+                        );
+
+                        // Fallback to any English male voice if UK specific isn't found
+                        if (!maleVoice) {
+                            maleVoice = voices.find(voice =>
+                                voice.lang.startsWith('en-') && (voice.name.toLowerCase().includes('male') || voice.name.toLowerCase().includes('david') || voice.name.toLowerCase().includes('daniel'))
+                            );
+                        }
+
+                        // As a last resort, try to find any voice that isn't explicitly female
+                        if (!maleVoice) {
+                            maleVoice = voices.find(voice =>
+                                !voice.name.toLowerCase().includes('female') && !voice.name.toLowerCase().includes('zira') && voice.lang.startsWith('en-')
+                            );
+                        }
+
+                        if (maleVoice) {
+                            utterance.voice = maleVoice;
+                            console.log('Using voice:', maleVoice.name);
+                        } else {
+                            console.warn("Could not find a specific male voice. Using default.");
+                        }
+                        window.speechSynthesis.speak(utterance);
+                    };
+
+                    // Voices might not be immediately loaded, so wait for them
+                    if (window.speechSynthesis.getVoices().length === 0) {
+                        window.speechSynthesis.onvoiceschanged = () => {
+                            setMaleVoice();
+                        };
+                    } else {
+                        setMaleVoice();
+                    }
+
+                } else {
+                    console.error("Speech Synthesis API not supported in this browser.");
+                    // In a real application, you might show a user-friendly message on screen.
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+
