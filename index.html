@@ -108,26 +108,37 @@
             fullPoemText = fullPoemText.trim();
 
             readPoemBtn.addEventListener('click', () => {
-                if ('speechSynthesis' in window) {
-                    const utterance = new SpeechSynthesisUtterance(fullPoemText);
-                    utterance.lang = 'en-GB'; // Set language to British English
+                if (!('speechSynthesis' in window)) {
+                    console.error("Speech Synthesis API not supported in this browser.");
+                    readPoemBtn.textContent = 'Not Supported'; // Optional: indicate lack of support
+                    if (readPoemBtn.tagName === 'BUTTON') { // Ensure it's a button before disabling
+                         readPoemBtn.disabled = true;
+                    }
+                    return;
+                }
 
-                    // Function to find and set a male voice
-                    const setMaleVoice = () => {
+                // Check if speech is currently active (speaking)
+                if (window.speechSynthesis.speaking) {
+                    window.speechSynthesis.pause();
+                    readPoemBtn.textContent = 'Read Poem Aloud';
+                } else {
+                    // If not speaking, it means we either start fresh or it was paused.
+                    // The issue implies starting fresh when button is "Read Poem Aloud".
+                    window.speechSynthesis.cancel(); // Stop any previous (potentially paused or completed) speech
+
+                    const utterance = new SpeechSynthesisUtterance(fullPoemText); // fullPoemText is from outer scope
+                    utterance.lang = 'en-GB';
+
+                    const setMaleVoiceAndSpeak = (utt) => {
                         const voices = window.speechSynthesis.getVoices();
-                        // Try to find a male voice, prioritizing English (UK) if possible
                         let maleVoice = voices.find(voice =>
                             voice.lang === 'en-GB' && (voice.name.toLowerCase().includes('male') || voice.name.toLowerCase().includes('david') || voice.name.toLowerCase().includes('daniel'))
                         );
-
-                        // Fallback to any English male voice if UK specific isn't found
                         if (!maleVoice) {
                             maleVoice = voices.find(voice =>
                                 voice.lang.startsWith('en-') && (voice.name.toLowerCase().includes('male') || voice.name.toLowerCase().includes('david') || voice.name.toLowerCase().includes('daniel'))
                             );
                         }
-
-                        // As a last resort, try to find any voice that isn't explicitly female
                         if (!maleVoice) {
                             maleVoice = voices.find(voice =>
                                 !voice.name.toLowerCase().includes('female') && !voice.name.toLowerCase().includes('zira') && voice.lang.startsWith('en-')
@@ -135,26 +146,23 @@
                         }
 
                         if (maleVoice) {
-                            utterance.voice = maleVoice;
+                            utt.voice = maleVoice;
                             console.log('Using voice:', maleVoice.name);
                         } else {
                             console.warn("Could not find a specific male voice. Using default.");
                         }
-                        window.speechSynthesis.speak(utterance);
+                        window.speechSynthesis.speak(utt);
+                        readPoemBtn.textContent = 'Pause'; // Set text to Pause when speech starts
                     };
 
-                    // Voices might not be immediately loaded, so wait for them
                     if (window.speechSynthesis.getVoices().length === 0) {
                         window.speechSynthesis.onvoiceschanged = () => {
-                            setMaleVoice();
+                            setMaleVoiceAndSpeak(utterance);
+                            window.speechSynthesis.onvoiceschanged = null; // Avoid multiple triggers
                         };
                     } else {
-                        setMaleVoice();
+                        setMaleVoiceAndSpeak(utterance);
                     }
-
-                } else {
-                    console.error("Speech Synthesis API not supported in this browser.");
-                    // In a real application, you might show a user-friendly message on screen.
                 }
             });
         });
