@@ -10,7 +10,7 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            background-color: gold; /* A plain, soft blue background */
+            background-color: khaki; /* A plain, soft blue background */
             display: flex;
             flex-direction: column; /* Arrange content vertically */
             /* Removed min-height: 100vh to allow content to define height and enable scrolling */
@@ -23,13 +23,16 @@
             /* Added padding-bottom to ensure space below the last element, making scrolling visible */
             padding-bottom: 5rem; /* Extra space at the bottom for scrolling past the button */
         }
+         .poem-icon {
+            font-size: 15rem;
+         }
 
         /* Heading style */
         .poem-title {
             font-size: 2.5rem; /* Slightly larger title */
             font-weight: 600;
-            margin-bottom: 2rem; /* More space below the title */
-            line-height: 1.2;
+            margin-bottom: 0; /* More space below the title */
+            line-height: 1;
         }
 
         /* Poem stanza style */
@@ -68,8 +71,8 @@
     </style>
 </head>
 <body>
-    <h1 class="poem-title">A Father's Day poem 🚲</h1>
-
+    <h1 class="poem-title">Happy Father's Day: a poem</h1>
+    <span class="poem-icon">🚲</span>
     <p class="poem-stanza">
         My dad, <span class="highlight">Eddie Webb</span>, a fine old chap:<br>
         With his cycling spirit, and an OS map.<br>
@@ -94,78 +97,99 @@
     <button id="readPoemBtn" class="read-button">Read Poem Aloud</button>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const readPoemBtn = document.getElementById('readPoemBtn');
-            const poemStanzas = document.querySelectorAll('.poem-stanza');
-            let fullPoemText = '';
+document.addEventListener('DOMContentLoaded', () => {
+    const readPoemBtn = document.getElementById('readPoemBtn');
+    const poemStanzas = document.querySelectorAll('.poem-stanza');
+    let fullPoemText = '';
 
-            poemStanzas.forEach(stanza => {
-                // Get text content, replacing <br> with a space for better pronunciation flow
-                fullPoemText += stanza.textContent.replace(/<br>/g, ' ') + ' ';
-            });
+    poemStanzas.forEach(stanza => {
+        fullPoemText += stanza.textContent.replace(/<br>/g, ' ') + ' ';
+    });
+    fullPoemText = fullPoemText.trim();
 
-            // Trim any extra whitespace
-            fullPoemText = fullPoemText.trim();
+    let utterance = null; // Declare utterance here, initially null
+    let isPaused = false; // Track pause state manually for more control
 
-            readPoemBtn.addEventListener('click', () => {
-                if (!('speechSynthesis' in window)) {
-                    console.error("Speech Synthesis API not supported in this browser.");
-                    readPoemBtn.textContent = 'Not Supported'; // Optional: indicate lack of support
-                    if (readPoemBtn.tagName === 'BUTTON') { // Ensure it's a button before disabling
-                         readPoemBtn.disabled = true;
-                    }
-                    return;
-                }
+    // Function to set up and speak the utterance
+    const speakPoem = () => {
+        window.speechSynthesis.cancel(); // Cancel any existing speech
+        utterance = new SpeechSynthesisUtterance(fullPoemText);
+        utterance.lang = 'en-GB';
 
-                // Check if speech is currently active (speaking)
-                if (window.speechSynthesis.speaking) {
-                    window.speechSynthesis.pause();
-                    readPoemBtn.textContent = 'Read Poem Aloud';
-                } else {
-                    // If not speaking, it means we either start fresh or it was paused.
-                    // The issue implies starting fresh when button is "Read Poem Aloud".
-                    window.speechSynthesis.cancel(); // Stop any previous (potentially paused or completed) speech
+        // Event listener for when the utterance ends
+        utterance.onend = () => {
+            readPoemBtn.textContent = 'Read Poem Aloud';
+            isPaused = false; // Reset pause state
+            // utterance = null; // Optional: clear utterance when done
+        };
+        
+        utterance.onerror = (event) => {
+            console.error('SpeechSynthesisUtterance.onerror', event);
+            readPoemBtn.textContent = 'Error Reading';
+            isPaused = false;
+            // utterance = null; 
+        };
 
-                    const utterance = new SpeechSynthesisUtterance(fullPoemText); // fullPoemText is from outer scope
-                    utterance.lang = 'en-GB';
+        const setMaleVoiceAndSpeak = (utt) => {
+            const voices = window.speechSynthesis.getVoices();
+            let maleVoice = voices.find(voice =>
+                voice.lang === 'en-GB' && (voice.name.toLowerCase().includes('male') || voice.name.toLowerCase().includes('david') || voice.name.toLowerCase().includes('daniel'))
+            );
+            // Fallback voice selection logic (remains the same)
+            if (!maleVoice) {
+                maleVoice = voices.find(voice =>
+                    voice.lang.startsWith('en-') && (voice.name.toLowerCase().includes('male') || voice.name.toLowerCase().includes('david') || voice.name.toLowerCase().includes('daniel'))
+                );
+            }
+            if (!maleVoice) {
+                maleVoice = voices.find(voice =>
+                    !voice.name.toLowerCase().includes('female') && !voice.name.toLowerCase().includes('zira') && voice.lang.startsWith('en-')
+                );
+            }
 
-                    const setMaleVoiceAndSpeak = (utt) => {
-                        const voices = window.speechSynthesis.getVoices();
-                        let maleVoice = voices.find(voice =>
-                            voice.lang === 'en-GB' && (voice.name.toLowerCase().includes('male') || voice.name.toLowerCase().includes('david') || voice.name.toLowerCase().includes('daniel'))
-                        );
-                        if (!maleVoice) {
-                            maleVoice = voices.find(voice =>
-                                voice.lang.startsWith('en-') && (voice.name.toLowerCase().includes('male') || voice.name.toLowerCase().includes('david') || voice.name.toLowerCase().includes('daniel'))
-                            );
-                        }
-                        if (!maleVoice) {
-                            maleVoice = voices.find(voice =>
-                                !voice.name.toLowerCase().includes('female') && !voice.name.toLowerCase().includes('zira') && voice.lang.startsWith('en-')
-                            );
-                        }
+            if (maleVoice) {
+                utt.voice = maleVoice;
+            } else {
+                console.warn("Could not find a specific male voice. Using default.");
+            }
+            window.speechSynthesis.speak(utt);
+            readPoemBtn.textContent = 'Pause';
+            isPaused = false;
+        };
 
-                        if (maleVoice) {
-                            utt.voice = maleVoice;
-                            console.log('Using voice:', maleVoice.name);
-                        } else {
-                            console.warn("Could not find a specific male voice. Using default.");
-                        }
-                        window.speechSynthesis.speak(utt);
-                        readPoemBtn.textContent = 'Pause'; // Set text to Pause when speech starts
-                    };
+        if (window.speechSynthesis.getVoices().length === 0) {
+            window.speechSynthesis.onvoiceschanged = () => {
+                setMaleVoiceAndSpeak(utterance);
+                window.speechSynthesis.onvoiceschanged = null; 
+            };
+        } else {
+            setMaleVoiceAndSpeak(utterance);
+        }
+    };
 
-                    if (window.speechSynthesis.getVoices().length === 0) {
-                        window.speechSynthesis.onvoiceschanged = () => {
-                            setMaleVoiceAndSpeak(utterance);
-                            window.speechSynthesis.onvoiceschanged = null; // Avoid multiple triggers
-                        };
-                    } else {
-                        setMaleVoiceAndSpeak(utterance);
-                    }
-                }
-            });
-        });
+    readPoemBtn.addEventListener('click', () => {
+        if (!('speechSynthesis' in window)) {
+            console.error("Speech Synthesis API not supported in this browser.");
+            readPoemBtn.textContent = 'Not Supported';
+            if (readPoemBtn.tagName === 'BUTTON') {
+                readPoemBtn.disabled = true;
+            }
+            return;
+        }
+
+        if (window.speechSynthesis.speaking && !isPaused) { // If speaking and not paused (i.e., actively playing)
+            window.speechSynthesis.pause();
+            isPaused = true;
+            readPoemBtn.textContent = 'Read Poem Aloud';
+        } else if (isPaused) { // If paused
+            window.speechSynthesis.resume();
+            isPaused = false;
+            readPoemBtn.textContent = 'Pause';
+        } else { // If not speaking and not paused (i.e., stopped or fresh start)
+            speakPoem();
+        }
+    });
+});
     </script>
 </body>
 </html>
